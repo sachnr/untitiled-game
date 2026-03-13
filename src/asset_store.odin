@@ -29,4 +29,3 @@ store_get_texture :: proc(asset_store: ^AssetStore, asset_id: string) -> ^SDL.Te
 	assert(ok, fmt.tprintf("texture not found, id: %s", asset_id))
 	return texture
 }
-

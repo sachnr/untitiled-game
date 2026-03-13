@@ -1,10 +1,11 @@
 package main
 
-import "core:fmt"
 import "core:log"
-import sdl "vendor:sdl3"
 
 main :: proc() {
+	logger := log.create_console_logger()
+	context.logger = logger
+
 	gamestate := initialize("pixel plane", 800, 600)
 	defer destroy(gamestate)
 	run(gamestate)
