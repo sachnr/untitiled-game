@@ -1,6 +1,7 @@
 package main
 
 import "core:fmt"
+import "core:mem"
 import SDL "vendor:sdl3"
 import IMAGE "vendor:sdl3/image"
 import TTF "vendor:sdl3/ttf"
@@ -8,6 +9,11 @@ import TTF "vendor:sdl3/ttf"
 AssetStore :: struct {
 	textures: map[string]^SDL.Texture,
 	fonts:    map[string]^TTF.Font,
+}
+
+store_init :: proc(a: ^AssetStore, arena: mem.Allocator) {
+	a.textures = make_map(map[string]^SDL.Texture, arena)
+	a.fonts = make_map(map[string]^TTF.Font, arena)
 }
 
 store_add_texture :: proc(
@@ -29,3 +35,4 @@ store_get_texture :: proc(asset_store: ^AssetStore, asset_id: string) -> ^SDL.Te
 	assert(ok, fmt.tprintf("texture not found, id: %s", asset_id))
 	return texture
 }
+

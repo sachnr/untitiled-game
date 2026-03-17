@@ -2,7 +2,6 @@ package main
 
 import "core:log"
 import SDL "vendor:sdl3"
-import TTF "vendor:sdl3/ttf"
 
 GameState :: struct {
 	debug:         bool,
@@ -12,6 +11,7 @@ GameState :: struct {
 	asset_store:   ^AssetStore,
 	window:        ^SDL.Window,
 	renderer:      ^SDL.Renderer,
+	memory:        ^Memory,
 }
 
 Player :: struct {
@@ -34,11 +34,12 @@ initialize :: proc(title: cstring, window_width: i32, window_height: i32) -> ^Ga
 	assert(renderer != nil, string(SDL.GetError()))
 
 	gamestate := new(GameState)
+	memory := new(Memory)
+	memory_init(memory)
+
 	asset_store := new(AssetStore)
-	asset_store^ = AssetStore {
-		textures = make_map(map[string]^SDL.Texture),
-		fonts    = make_map(map[string]^TTF.Font),
-	}
+	perm := memory_allocator(memory, ArenaKind.Permanent)
+	store_init(asset_store, perm)
 
 	gamestate^ = {
 		debug       = false,
@@ -47,20 +48,23 @@ initialize :: proc(title: cstring, window_width: i32, window_height: i32) -> ^Ga
 		asset_store = asset_store,
 		window      = window,
 		renderer    = renderer,
+		memory      = memory,
 	}
 
 	return gamestate
 }
 
 destroy :: proc(gamestate: ^GameState) {
-	if gamestate.window != nil {
-		SDL.DestroyWindow(gamestate.window)
-	}
+	log.info("destructor called")
 	if gamestate.renderer != nil {
 		SDL.DestroyRenderer(gamestate.renderer)
 	}
-	SDL.Quit()
+	if gamestate.window != nil {
+		SDL.DestroyWindow(gamestate.window)
+	}
+	memory_destroy(gamestate.memory)
 	free(gamestate)
+	SDL.Quit()
 }
 
 run :: proc(game: ^GameState) {
