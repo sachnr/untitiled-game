@@ -1,4 +1,4 @@
-package main
+package asset_store
 
 import "core:fmt"
 import "core:mem"
@@ -11,12 +11,12 @@ AssetStore :: struct {
 	fonts:    map[string]^TTF.Font,
 }
 
-store_init :: proc(a: ^AssetStore, arena: mem.Allocator) {
+init :: proc(a: ^AssetStore, arena: mem.Allocator) {
 	a.textures = make_map(map[string]^SDL.Texture, arena)
 	a.fonts = make_map(map[string]^TTF.Font, arena)
 }
 
-store_add_texture :: proc(
+add_texture :: proc(
 	asset_store: ^AssetStore,
 	renderer: ^SDL.Renderer,
 	asset_id: string,
@@ -30,7 +30,7 @@ store_add_texture :: proc(
 	asset_store.textures[asset_id] = texture
 }
 
-store_get_texture :: proc(asset_store: ^AssetStore, asset_id: string) -> ^SDL.Texture {
+get_texture :: proc(asset_store: ^AssetStore, asset_id: string) -> ^SDL.Texture {
 	texture, ok := asset_store.textures[asset_id]
 	assert(ok, fmt.tprintf("texture not found, id: %s", asset_id))
 	return texture
