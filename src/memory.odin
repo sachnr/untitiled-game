@@ -1,5 +1,6 @@
 package main
 
+import "core:log"
 import mem "core:mem"
 import vmem "core:mem/virtual"
 
@@ -16,6 +17,7 @@ Memory :: struct {
 }
 
 memory_init :: proc(m: ^Memory) {
+	log.info("initilizing memory arenas")
 	err := vmem.arena_init_growing(&m.permanent)
 	assert(err == nil, "Failed to allocate memory")
 

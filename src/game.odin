@@ -77,6 +77,8 @@ run :: proc(game: ^GameState) {
 		update(game, dt)
 		render(game)
 
+		memory_reset_frame(game.memory)
+
 		// waiting to match the frametime
 		time_elapsed := ms_now - game.ms_prev_frame
 		ms_wait := MS_PER_FRAME - time_elapsed
@@ -87,13 +89,13 @@ run :: proc(game: ^GameState) {
 	}
 }
 
-setup :: proc(g: ^GameState) {
-	g.ms_prev_frame = SDL.GetTicks()
-	store.add_texture(g.asset_store, g.renderer, "player", "./assets/player.png")
+setup :: proc(game: ^GameState) {
+	game.ms_prev_frame = SDL.GetTicks()
+	store.add_texture(game.asset_store, game.renderer, "player", "./assets/player.png")
 
-	systems.render_system_register(g.registry)
+	systems.render_system_register(game.registry)
 
-	player := ECS.registry_create_entity(g.registry)
+	player := ECS.registry_create_entity(game.registry)
 	player_sprite := components.SpriteComponent {
 		asset_id = "player",
 		width = 64.0,
@@ -102,13 +104,13 @@ setup :: proc(g: ^GameState) {
 		is_fixed = false,
 		src_rect = SDL.FRect{x = 0, y = 0, w = 64.0, h = 96.0},
 	}
-	ECS.registry_add_component(g.registry, player.id, player_sprite)
+	ECS.registry_add_component(game.registry, player.id, player_sprite)
 	player_transform := components.TransformComponent {
-		scale    = {1.0, 1.0},
+		scale    = {2.0, 2.0},
 		position = {0.0, 0.0},
 		rotation = 0.0,
 	}
-	ECS.registry_add_component(g.registry, player.id, player_transform)
+	ECS.registry_add_component(game.registry, player.id, player_transform)
 }
 
 handle_events :: proc(game: ^GameState) {

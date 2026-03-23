@@ -1,6 +1,7 @@
 package asset_store
 
 import "core:fmt"
+import "core:log"
 import "core:mem"
 import SDL "vendor:sdl3"
 import IMAGE "vendor:sdl3/image"
@@ -12,6 +13,7 @@ AssetStore :: struct {
 }
 
 init :: proc(a: ^AssetStore, arena: mem.Allocator) {
+	log.info("initializing asset store")
 	a.textures = make_map(map[string]^SDL.Texture, arena)
 	a.fonts = make_map(map[string]^TTF.Font, arena)
 }
@@ -28,6 +30,14 @@ add_texture :: proc(
 	SDL.free(surface)
 	assert(texture != nil, string(SDL.GetError()))
 	asset_store.textures[asset_id] = texture
+}
+
+destroy_texture :: proc(a: ^AssetStore, asset_id: string) {
+	tex, ok := a.textures[asset_id]
+	if !ok do return
+
+	SDL.DestroyTexture(tex)
+    delete_key(&a.textures, asset_id)
 }
 
 get_texture :: proc(asset_store: ^AssetStore, asset_id: string) -> ^SDL.Texture {

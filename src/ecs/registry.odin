@@ -83,14 +83,14 @@ registry_create_entity :: proc(r: ^Registry) -> Entity {
 	}
 
 	append(&r.entities_to_add, entity)
-	log.infof("entity_queued_to_be_added: %d", entity.id)
+	log.infof("entity queued for creation: %d", entity.id)
 
 	return entity
 }
 
 registry_kill_entity :: proc(r: ^Registry, entity: Entity) {
 	append(&r.entities_to_remove, entity)
-	log.infof("entity_queued_to_be_removed: %d", entity.id)
+	log.infof("entity queued for deletion: %d", entity.id)
 }
 
 registry_signature_add_type :: proc(r: ^Registry, sig: ^Signature, $T: typeid) {
@@ -107,6 +107,7 @@ registry_add_system :: proc(r: ^Registry, system_id: u32, sig: Signature) {
 	}
 
 	append(&r.systems, s)
+	log.infof("system added to registry: (id: %d) (sig: %d)", s.id, s.signature)
 }
 
 registry_get_system :: proc(r: ^Registry, system_id: u32) -> ^System {
@@ -131,6 +132,7 @@ registry_add_entity_to_systems :: proc(r: ^Registry, entity: Entity) {
 
 		if ok {
 			system_add_entity(&system, entity)
+			log.infof("entity_id %d added to system_id %d", entity.id, system.id)
 		}
 	}
 }
@@ -140,6 +142,7 @@ registry_remove_entity_from_system :: proc(r: ^Registry, entity: Entity) {
 	for &system in r.systems {
 		if _, exists := system.entity_to_index[entity.id]; exists {
 			system_remove_entity(&system, entity)
+			log.infof("entity_id %d removed from system_id %d", entity.id, system.id)
 		}
 	}
 }
@@ -158,6 +161,7 @@ registry_add_component :: proc(r: ^Registry, entity_id: u32, component: $T) {
 	pool := registry_get_pool(r, T)
 	pool_set_entity(pool, entity_id, component)
 	signature_set(&r.entity_component_signatures[entity_id], cid)
+	log.infof("component %d added for entity %d", cid, entity_id)
 }
 
 registry_get_component :: proc(r: ^Registry, entity_id: u32, $T: typeid) -> ^T {
@@ -170,6 +174,7 @@ registry_get_component :: proc(r: ^Registry, entity_id: u32, $T: typeid) -> ^T {
 registry_update :: proc(r: ^Registry) {
 	for entity in r.entities_to_add {
 		registry_add_entity_to_systems(r, entity)
+		log.infof("entity %d added to the registry", entity.id)
 	}
 	clear(&r.entities_to_add)
 
@@ -185,6 +190,7 @@ registry_update :: proc(r: ^Registry) {
 		}
 		signature_clear_all(&r.entity_component_signatures[entity.id])
 		queue.push_back(&r.free_ids, entity.id)
+		log.infof("entity %d deleted from the registry", entity.id)
 	}
 	clear(&r.entities_to_remove)
 }
