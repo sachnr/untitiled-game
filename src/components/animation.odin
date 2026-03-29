@@ -1,4 +1,4 @@
-package odin
+package components
 
 AnimationComponent :: struct {
 	num_frames:       u8,

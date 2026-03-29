@@ -3,10 +3,14 @@ package systems
 import store "../asset_store/"
 import components "../components/"
 import ecs "../ecs"
+import "core:log"
+import "core:mem"
 import "core:sort"
 import SDL "vendor:sdl3"
 
 render_system_register :: proc(r: ^ecs.Registry) {
+	log.info("registering render system")
+
 	render_signature: ecs.Signature = 0
 	ecs.registry_signature_add_type(r, &render_signature, components.SpriteComponent)
 	ecs.registry_signature_add_type(r, &render_signature, components.TransformComponent)
@@ -18,6 +22,7 @@ render_system_update :: proc(
 	r: ^ecs.Registry,
 	renderer: ^SDL.Renderer,
 	asset_store: ^store.AssetStore,
+	alloc: mem.Allocator,
 ) {
 	system := ecs.registry_get_system(r, u32(Systems.RenderSystem))
 
@@ -27,7 +32,7 @@ render_system_update :: proc(
 		transform_component: components.TransformComponent,
 	}
 
-	entities := make([dynamic]RenderableEntity, context.temp_allocator)
+	entities := make([dynamic]RenderableEntity, alloc)
 
 	for entity in system.entities {
 		sprite := ecs.registry_get_component(r, entity.id, components.SpriteComponent)^

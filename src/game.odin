@@ -2,56 +2,51 @@ package main
 
 import store "asset_store"
 import "components"
+import config "config"
 import "core:log"
 import ECS "ecs"
+import "events"
 import "systems"
 import SDL "vendor:sdl3"
 
 GameState :: struct {
-	debug:         bool,
-	is_running:    bool,
-	ms_prev_frame: u64,
-	asset_store:   ^store.AssetStore,
 	window:        ^SDL.Window,
 	renderer:      ^SDL.Renderer,
-	registry:      ^ECS.Registry,
-	memory:        ^Memory,
+	ms_prev_frame: u64,
+	registry:      ECS.Registry,
+	asset_store:   store.AssetStore,
+	memory:        Memory,
+	fc:            events.FrameContext,
+	debug:         bool,
+	is_running:    bool,
 }
 
 
-initialize :: proc(title: cstring, window_width: i32, window_height: i32) -> ^GameState {
+initialize :: proc(gamestate: ^GameState, title: cstring, window_width: i32, window_height: i32) {
 	assert(SDL.Init(SDL.INIT_VIDEO), string(SDL.GetError()))
 	window := SDL.CreateWindow(title, window_width, window_height, SDL.WINDOW_BORDERLESS)
 	assert(window != nil, string(SDL.GetError()))
 	renderer := SDL.CreateRenderer(window, nil)
 	assert(renderer != nil, string(SDL.GetError()))
 
-	gamestate := new(GameState)
-	memory := new(Memory)
-	memory_init(memory)
+	gamestate.debug = false
+	gamestate.is_running = true
+	gamestate.window = window
+	gamestate.renderer = renderer
 
-	asset_store := new(store.AssetStore)
-	perm := memory_allocator(memory, ArenaKind.Permanent)
-	store.init(asset_store, perm)
+	gamestate.memory = memory_init()
 
-	level := memory_allocator(memory, ArenaKind.Level)
-	registry := new(ECS.Registry)
-	ECS.registry_init(registry, MAX_COMPONENTS, level)
+	perm := memory_allocator(&gamestate.memory, ArenaKind.Permanent)
+	gamestate.asset_store = store.init(perm)
 
-	temp := memory_allocator(memory, ArenaKind.Frame)
-	context.temp_allocator = temp
+	level := memory_allocator(&gamestate.memory, ArenaKind.Level)
+	gamestate.registry = ECS.registry_init(MAX_COMPONENTS, level)
 
-	gamestate^ = {
-		debug       = false,
-		is_running  = true,
-		asset_store = asset_store,
-		window      = window,
-		renderer    = renderer,
-		registry    = registry,
-		memory      = memory,
-	}
+	frame := memory_allocator(&gamestate.memory, ArenaKind.Frame)
+	gamestate.fc = events.frame_context_init(frame)
 
-	return gamestate
+	log.info("initializing default config")
+	config.init_bindings()
 }
 
 destroy :: proc(gamestate: ^GameState) {
@@ -62,8 +57,7 @@ destroy :: proc(gamestate: ^GameState) {
 	if gamestate.window != nil {
 		SDL.DestroyWindow(gamestate.window)
 	}
-	memory_destroy(gamestate.memory)
-	free(gamestate)
+	memory_destroy(&gamestate.memory)
 	SDL.Quit()
 }
 
@@ -77,7 +71,7 @@ run :: proc(game: ^GameState) {
 		update(game, dt)
 		render(game)
 
-		memory_reset_frame(game.memory)
+		events.frame_context_reset(&game.fc)
 
 		// waiting to match the frametime
 		time_elapsed := ms_now - game.ms_prev_frame
@@ -91,11 +85,13 @@ run :: proc(game: ^GameState) {
 
 setup :: proc(game: ^GameState) {
 	game.ms_prev_frame = SDL.GetTicks()
-	store.add_texture(game.asset_store, game.renderer, "player", "./assets/player.png")
+	store.add_texture(&game.asset_store, game.renderer, "player", "./assets/player.png")
 
-	systems.render_system_register(game.registry)
+	systems.render_system_register(&game.registry)
+	systems.movement_system_register(&game.registry)
+	systems.controllable_entity_system_register(&game.registry)
 
-	player := ECS.registry_create_entity(game.registry)
+	player := ECS.registry_create_entity(&game.registry)
 	player_sprite := components.SpriteComponent {
 		asset_id = "player",
 		width = 64.0,
@@ -104,13 +100,20 @@ setup :: proc(game: ^GameState) {
 		is_fixed = false,
 		src_rect = SDL.FRect{x = 0, y = 0, w = 64.0, h = 96.0},
 	}
-	ECS.registry_add_component(game.registry, player.id, player_sprite)
+	ECS.registry_add_component(&game.registry, player.id, player_sprite)
 	player_transform := components.TransformComponent {
-		scale    = {2.0, 2.0},
-		position = {0.0, 0.0},
-		rotation = 0.0,
+		scale = {1.5, 1.5},
 	}
-	ECS.registry_add_component(game.registry, player.id, player_transform)
+	ECS.registry_add_component(&game.registry, player.id, player_transform)
+	player_rigid_body := components.RigidBodyComponent{}
+	ECS.registry_add_component(&game.registry, player.id, player_rigid_body)
+	controllable_entity := components.ControllableEntityComponent {
+		velocity_up    = {0, -50},
+		velocity_down  = {0, 50},
+		velocity_left  = {-50, 0},
+		velocity_right = {50, 0},
+	}
+	ECS.registry_add_component(&game.registry, player.id, controllable_entity)
 }
 
 handle_events :: proc(game: ^GameState) {
@@ -123,6 +126,11 @@ handle_events :: proc(game: ^GameState) {
 			if event.key.key == SDL.K_ESCAPE {
 				game.is_running = false
 			}
+			action := config.get_input_action(event.key.scancode)
+			events.frame_context_set_action(&game.fc, action, true)
+		case .KEY_UP:
+			action := config.get_input_action(event.key.scancode)
+			events.frame_context_set_action(&game.fc, action, false)
 		case .WINDOW_RESIZED:
 			log.infof("window resized [%d, %d]", event.window.data1, event.window.data2)
 		case .WINDOW_FOCUS_GAINED:
@@ -134,14 +142,23 @@ handle_events :: proc(game: ^GameState) {
 }
 
 update :: proc(game: ^GameState, dt: f64) {
-	ECS.registry_update(game.registry)
+	systems.controllable_entity_handle_events(&game.registry, &game.fc)
+
+	ECS.registry_update(&game.registry)
+
+	systems.movement_system_update(&game.registry, dt)
 }
 
 render :: proc(game: ^GameState) {
 	SDL.SetRenderDrawColor(game.renderer, 0, 0, 0, 255)
 	SDL.RenderClear(game.renderer)
 
-	systems.render_system_update(game.registry, game.renderer, game.asset_store)
+	systems.render_system_update(
+		&game.registry,
+		game.renderer,
+		&game.asset_store,
+		memory_allocator(&game.memory, ArenaKind.Frame),
+	)
 
 	SDL.RenderPresent(game.renderer)
 }

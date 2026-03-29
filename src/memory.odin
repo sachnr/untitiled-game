@@ -16,7 +16,8 @@ Memory :: struct {
 	frame:     vmem.Arena,
 }
 
-memory_init :: proc(m: ^Memory) {
+memory_init :: proc() -> Memory {
+	m: Memory
 	log.info("initilizing memory arenas")
 	err := vmem.arena_init_growing(&m.permanent)
 	assert(err == nil, "Failed to allocate memory")
@@ -26,14 +27,8 @@ memory_init :: proc(m: ^Memory) {
 
 	err = vmem.arena_init_growing(&m.frame)
 	assert(err == nil, "Failed to allocate memory")
-}
 
-memory_reset_frame :: proc(m: ^Memory) {
-	vmem.arena_free_all(&m.frame)
-}
-
-memory_reset_level :: proc(m: ^Memory) {
-	vmem.arena_free_all(&m.level)
+	return m
 }
 
 memory_allocator :: proc(m: ^Memory, kind: ArenaKind) -> mem.Allocator {

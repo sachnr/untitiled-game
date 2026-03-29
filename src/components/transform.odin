@@ -1,10 +1,10 @@
 package components
 
-import "core:math/linalg"
+import core "../core"
 
 TransformComponent :: struct {
-	position: linalg.Vector2f32,
-	scale:    linalg.Vector2f32,
+	position: core.Vec2,
+	scale:    core.Vec2,
 	rotation: f32,
 }
 

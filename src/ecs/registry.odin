@@ -38,8 +38,10 @@ Registry :: struct {
 	free_ids:                    queue.Queue(u32),
 }
 
-registry_init :: proc(r: ^Registry, max_components: u8, alloc: mem.Allocator) {
+registry_init :: proc(max_components: u8, alloc: mem.Allocator) -> Registry {
 	log.info("Initializing new world registry")
+
+	r: Registry
 
 	r.alloc = alloc
 	r.num_entities = 0
@@ -60,6 +62,8 @@ registry_init :: proc(r: ^Registry, max_components: u8, alloc: mem.Allocator) {
 
 	err := queue.init(&r.free_ids, 128, alloc)
 	assert(err == nil, "failed to initialize free_ids queue")
+
+	return r
 }
 
 registry_create_entity :: proc(r: ^Registry) -> Entity {
@@ -167,8 +171,8 @@ registry_add_component :: proc(r: ^Registry, entity_id: u32, component: $T) {
 registry_get_component :: proc(r: ^Registry, entity_id: u32, $T: typeid) -> ^T {
 	cid := registry_get_component_id(r, T)
 	pool := registry_get_pool(r, T)
-	component := pool_get_data(pool, entity_id)
-	return component
+	entity := pool_get_data(pool, entity_id)
+	return entity
 }
 
 registry_update :: proc(r: ^Registry) {

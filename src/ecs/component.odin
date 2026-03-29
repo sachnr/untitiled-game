@@ -8,7 +8,7 @@ registry_get_or_create_component_id :: proc(r: ^Registry, $T: typeid) -> u32 {
 
 	id := len(r.component_pools)
 
-	pool := new(Pool(T))
+	pool := new(Pool(T), r.alloc)
 	pool_init(pool, r.alloc)
 
 	append(&r.component_pools, pool)
@@ -32,4 +32,3 @@ registry_get_component_id :: proc(r: ^Registry, $T: typeid) -> u32 {
 	assert(ok, "component type not registered in registry")
 	return id
 }
-

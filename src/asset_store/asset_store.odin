@@ -12,10 +12,14 @@ AssetStore :: struct {
 	fonts:    map[string]^TTF.Font,
 }
 
-init :: proc(a: ^AssetStore, arena: mem.Allocator) {
+init :: proc(arena: mem.Allocator) -> AssetStore {
 	log.info("initializing asset store")
+
+	a: AssetStore
 	a.textures = make_map(map[string]^SDL.Texture, arena)
 	a.fonts = make_map(map[string]^TTF.Font, arena)
+
+	return a
 }
 
 add_texture :: proc(
@@ -24,6 +28,7 @@ add_texture :: proc(
 	asset_id: string,
 	path: cstring,
 ) {
+	log.infof("add_texture: loading %s", path)
 	surface := IMAGE.Load(path)
 	assert(surface != nil, "file path not fount")
 	texture := SDL.CreateTextureFromSurface(renderer, surface)
@@ -37,7 +42,7 @@ destroy_texture :: proc(a: ^AssetStore, asset_id: string) {
 	if !ok do return
 
 	SDL.DestroyTexture(tex)
-    delete_key(&a.textures, asset_id)
+	delete_key(&a.textures, asset_id)
 }
 
 get_texture :: proc(asset_store: ^AssetStore, asset_id: string) -> ^SDL.Texture {

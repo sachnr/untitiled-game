@@ -1,7 +1,8 @@
 package components
 
-import "core:math/linalg"
+import core "../core"
 
 RigidBodyComponent :: struct {
-	velocity: linalg.Vector2f32,
+	velocity: core.Vec2,
 }
+

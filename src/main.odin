@@ -10,8 +10,10 @@ main :: proc() {
 	logger := log.create_console_logger()
 	context.logger = logger
 
-	gamestate := initialize("brawl", 800, 600)
-	defer destroy(gamestate)
-	run(gamestate)
-}
+	gamestate: GameState
+	initialize(&gamestate, "brawl", 800, 600)
+	defer destroy(&gamestate)
 
+    log.info("starting game")
+	run(&gamestate)
+}
