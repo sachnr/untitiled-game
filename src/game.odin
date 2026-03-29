@@ -28,6 +28,15 @@ initialize :: proc(gamestate: ^GameState, title: cstring, window_width: i32, win
 	assert(window != nil, string(SDL.GetError()))
 	renderer := SDL.CreateRenderer(window, nil)
 	assert(renderer != nil, string(SDL.GetError()))
+	assert(
+		SDL.SetRenderLogicalPresentation(
+			renderer,
+			window_width,
+			window_height,
+			SDL.RendererLogicalPresentation.LETTERBOX,
+		),
+		string(SDL.GetError()),
+	)
 
 	gamestate.debug = false
 	gamestate.is_running = true
@@ -90,6 +99,7 @@ setup :: proc(game: ^GameState) {
 	systems.render_system_register(&game.registry)
 	systems.movement_system_register(&game.registry)
 	systems.controllable_entity_system_register(&game.registry)
+	systems.animation_system_register(&game.registry)
 
 	player := ECS.registry_create_entity(&game.registry)
 	player_sprite := components.SpriteComponent {
@@ -114,6 +124,14 @@ setup :: proc(game: ^GameState) {
 		velocity_right = {50, 0},
 	}
 	ECS.registry_add_component(&game.registry, player.id, controllable_entity)
+	animation_component := components.AnimationComponent {
+		num_frames       = 10,
+		current_frame    = 1,
+		frame_rate_speed = 10,
+		is_loop          = true,
+		start_time       = SDL.GetTicks(),
+	}
+	ECS.registry_add_component(&game.registry, player.id, animation_component)
 }
 
 handle_events :: proc(game: ^GameState) {
@@ -147,6 +165,7 @@ update :: proc(game: ^GameState, dt: f64) {
 	ECS.registry_update(&game.registry)
 
 	systems.movement_system_update(&game.registry, dt)
+	systems.animation_system_update(&game.registry)
 }
 
 render :: proc(game: ^GameState) {

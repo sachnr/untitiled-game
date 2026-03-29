@@ -4,5 +4,6 @@ Systems :: enum {
 	RenderSystem,
 	MovementSystem,
 	ControllableEntitySystem,
+	AnimationSystem,
 }
 
