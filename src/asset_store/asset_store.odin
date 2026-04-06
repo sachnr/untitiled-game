@@ -34,10 +34,7 @@ add_texture :: proc(
 	texture := SDL.CreateTextureFromSurface(renderer, surface)
 	SDL.free(surface)
 	assert(texture != nil, string(SDL.GetError()))
-	assert(
-		SDL.SetTextureScaleMode(texture, SDL.ScaleMode.NEAREST),
-		string(SDL.GetError()),
-	)
+	assert(SDL.SetTextureScaleMode(texture, SDL.ScaleMode.NEAREST), string(SDL.GetError()))
 	asset_store.textures[asset_id] = texture
 }
 
@@ -54,3 +51,4 @@ get_texture :: proc(asset_store: ^AssetStore, asset_id: string) -> ^SDL.Texture 
 	assert(ok, fmt.tprintf("texture not found, id: %s", asset_id))
 	return texture
 }
+

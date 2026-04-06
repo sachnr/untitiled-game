@@ -17,7 +17,6 @@ render_system_register :: proc(r: ^ecs.Registry) {
 	ecs.registry_add_system(r, u32(Systems.RenderSystem), render_signature)
 }
 
-
 render_system_update :: proc(
 	r: ^ecs.Registry,
 	renderer: ^SDL.Renderer,
@@ -35,8 +34,8 @@ render_system_update :: proc(
 	entities := make([dynamic]RenderableEntity, alloc)
 
 	for entity in system.entities {
-		sprite := ecs.registry_get_component(r, entity.id, components.SpriteComponent)^
-		transform := ecs.registry_get_component(r, entity.id, components.TransformComponent)^
+		sprite := ecs.registry_get_component(r, entity, components.SpriteComponent)^
+		transform := ecs.registry_get_component(r, entity, components.TransformComponent)^
 		append(
 			&entities,
 			RenderableEntity {
@@ -68,7 +67,24 @@ render_system_update :: proc(
 
 		sprite := store.get_texture(asset_store, entity.sprite_component.asset_id)
 
-		SDL.RenderTexture(renderer, sprite, &src_rect, &dst_rect)
+		width := f32(sprite.w / 2)
+		height := f32(sprite.h / 2)
+		point := SDL.FPoint{width, height}
+		flip_mode := SDL.FlipMode.NONE
+
+		if entity.sprite_component.is_flipped {
+			flip_mode = SDL.FlipMode.HORIZONTAL
+		}
+
+		SDL.RenderTextureRotated(
+			renderer,
+			sprite,
+			&src_rect,
+			&dst_rect,
+			entity.sprite_component.angle,
+			&point,
+			flip_mode,
+		)
 	}
 }
 

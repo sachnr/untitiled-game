@@ -4,8 +4,8 @@ import SDL "vendor:sdl3"
 
 Action :: enum u8 {
 	Empty,
-	MoveForward,
-	MoveBackward,
+	MoveUp,
+	MoveDown,
 	MoveLeft,
 	MoveRight,
 	Jump,
@@ -14,8 +14,8 @@ Action :: enum u8 {
 DEFAULT_BINDINGS: [512]Action
 
 init_bindings :: proc() {
-	DEFAULT_BINDINGS[SDL.Scancode.W] = .MoveForward
-	DEFAULT_BINDINGS[SDL.Scancode.S] = .MoveBackward
+	DEFAULT_BINDINGS[SDL.Scancode.W] = .MoveUp
+	DEFAULT_BINDINGS[SDL.Scancode.S] = .MoveDown
 	DEFAULT_BINDINGS[SDL.Scancode.A] = .MoveLeft
 	DEFAULT_BINDINGS[SDL.Scancode.D] = .MoveRight
 	DEFAULT_BINDINGS[SDL.Scancode.SPACE] = .Jump

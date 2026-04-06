@@ -26,7 +26,7 @@ create_transformable_entity :: proc(r: ^Registry) -> Entity {
 	transform_component := TestTransformComponent {
 		position = {10, 20},
 	}
-	registry_add_component(r, e.id, transform_component)
+	registry_add_component(r, e, transform_component)
 	return e
 }
 
@@ -49,7 +49,7 @@ test_registry_adds_matching_entity_to_system :: proc(t: ^testing.T) {
 	testing.expect(t, len(system.entities) == 1)
 	testing.expect(t, system.entities[0].id == entity.id)
 
-	comp := registry_get_component(&r, entity.id, TestTransformComponent)
+	comp := registry_get_component(&r, entity, TestTransformComponent)
 	testing.expect(t, comp.position.x == 10)
 	testing.expect(t, comp.position.y == 20)
 }

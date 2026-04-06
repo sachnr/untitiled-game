@@ -5,5 +5,7 @@ Systems :: enum {
 	MovementSystem,
 	ControllableEntitySystem,
 	AnimationSystem,
+	SpriteFlipSystem,
+	PlayerStateSystem,
 }
 

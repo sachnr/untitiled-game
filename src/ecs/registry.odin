@@ -36,6 +36,10 @@ Registry :: struct {
 
 	// list of free entity ids
 	free_ids:                    queue.Queue(u32),
+
+	// tags
+	entity_per_tag:              map[string]Entity,
+	tag_per_entity:              map[u32]string,
 }
 
 registry_init :: proc(max_components: u8, alloc: mem.Allocator) -> Registry {
@@ -59,6 +63,9 @@ registry_init :: proc(max_components: u8, alloc: mem.Allocator) -> Registry {
 	r.component_id_by_type = make_map(map[typeid]u32, alloc)
 
 	r.systems = make([dynamic]System, alloc)
+
+	r.entity_per_tag = make(map[string]Entity, alloc)
+	r.tag_per_entity = make(map[u32]string, alloc)
 
 	err := queue.init(&r.free_ids, 128, alloc)
 	assert(err == nil, "failed to initialize free_ids queue")
@@ -159,19 +166,19 @@ registry_get_pool :: proc(r: ^Registry, $T: typeid) -> ^Pool(T) {
 	return cast(^Pool(T))r.component_pools[id]
 }
 
-registry_add_component :: proc(r: ^Registry, entity_id: u32, component: $T) {
+registry_add_component :: proc(r: ^Registry, entity: Entity, component: $T) {
 	cid := registry_get_or_create_component_id(r, T)
 	assert(cid < u32(r.max_components), "component id exceeds Signature(u32) capacity")
 	pool := registry_get_pool(r, T)
-	pool_set_entity(pool, entity_id, component)
-	signature_set(&r.entity_component_signatures[entity_id], cid)
-	log.infof("component %d added for entity %d", cid, entity_id)
+	pool_set_entity(pool, entity.id, component)
+	signature_set(&r.entity_component_signatures[entity.id], cid)
+	log.infof("component %d added for entity %d", cid, entity.id)
 }
 
-registry_get_component :: proc(r: ^Registry, entity_id: u32, $T: typeid) -> ^T {
+registry_get_component :: proc(r: ^Registry, entity: Entity, $T: typeid) -> ^T {
 	cid := registry_get_component_id(r, T)
 	pool := registry_get_pool(r, T)
-	entity := pool_get_data(pool, entity_id)
+	entity := pool_get_data(pool, entity.id)
 	return entity
 }
 
@@ -197,5 +204,35 @@ registry_update :: proc(r: ^Registry) {
 		log.infof("entity %d deleted from the registry", entity.id)
 	}
 	clear(&r.entities_to_remove)
+}
+
+// tags
+registry_tag_entity :: proc(r: ^Registry, entity: Entity, tag: string) {
+	if existing_tag, has_tag := r.tag_per_entity[entity.id]; has_tag {
+		delete_key(&r.entity_per_tag, existing_tag)
+	}
+	if prev_entity, exists := r.entity_per_tag[tag]; exists {
+		delete_key(&r.tag_per_entity, prev_entity.id)
+	}
+	r.entity_per_tag[tag] = entity
+	r.tag_per_entity[entity.id] = tag
+}
+registry_entity_has_tag :: proc(r: ^Registry, entity: Entity, tag: string) -> bool {
+	if entity_tag, exists := r.tag_per_entity[entity.id]; exists {
+		return entity_tag == tag
+	}
+	return false
+}
+registry_get_entity_by_tag :: proc(r: ^Registry, tag: string) -> Maybe(Entity) {
+	if entity, exists := r.entity_per_tag[tag]; exists {
+		return entity
+	}
+	return nil
+}
+registry_remove_entity_tag :: proc(r: ^Registry, entity: Entity) {
+	if tag, exists := r.tag_per_entity[entity.id]; exists {
+		delete_key(&r.entity_per_tag, tag)
+		delete_key(&r.tag_per_entity, entity.id)
+	}
 }
 
